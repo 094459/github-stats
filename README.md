@@ -1,6 +1,8 @@
 # GitHub Traffic Monitor
 
-Minimal web application to monitor GitHub repository traffic data.
+Minimal web application to monitor GitHub repository traffic data. You will need a valid GitHub key to use this tool. Your key is used to access the traffic data via the GitHub API.
+
+This project is simple, and designed to be a starter project for you to build from. You can extend this using your favorite AI coding tools like Kiro and Amazon Q Developer. The GitHub API is included in the [docs here](/docs/api.github.com.json), which you should provide as context to help it navigate the API when writing code.
 
 ## Setup
 
@@ -14,14 +16,16 @@ pip install -r requirements.txt
 python app.py
 ```
 
-3. Open http://localhost:5000
+3. Open [http://127.0.0.1:5001](http://127.0.0.1:5001)
 
 ## Usage
 
 1. Go to Settings and add your GitHub Personal Access Token
 2. Add repositories you want to monitor
-3. View traffic data on the Dashboard
-4. Data is collected automatically every 24 hours
+3. Click on the COLLECT button to download the data from the repositories you have added
+4. View traffic data on the Dashboard
+
+![demo dashboard](/images/github-stats-demo.png)
 
 ## Features
 
