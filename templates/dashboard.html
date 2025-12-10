@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>GitHub Traffic Dashboard</h2>
+    <div id="totalsDisplay" style="display: flex; gap: 2rem; margin: 1rem 0; font-size: 1.2em; font-weight: bold;">
+        <div>Total Views: <span id="totalViews" style="color: #36a2eb;">-</span></div>
+        <div>Total Clones: <span id="totalClones" style="color: #ff6384;">-</span></div>
+    </div>
+    <div style="margin: 1rem 0;">
+        <select id="periodSelect">
+            <option value="7d">Last 7 days</option>
+            <option value="30d" selected>Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+        </select>
+        <button class="btn" onclick="loadTrafficData()">Refresh</button>
+        <button class="btn" onclick="collectData()">Collect Now</button>
+    </div>
+</div>
+
+<div id="chartsContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let charts = {};
+
+async function loadTrafficData() {
+    const period = document.getElementById('periodSelect').value;
+    const [trafficResponse, totalsResponse] = await Promise.all([
+        fetch(`/api/traffic/${period}`),
+        fetch(`/api/totals/${period}`)
+    ]);
+    const data = await trafficResponse.json();
+    const totals = await totalsResponse.json();
+    
+    // Update totals display
+    document.getElementById('totalViews').textContent = totals.total_views.toLocaleString();
+    document.getElementById('totalClones').textContent = totals.total_clones.toLocaleString();
+    
+    // Clear existing charts
+    Object.values(charts).forEach(chart => chart.destroy());
+    charts = {};
+    
+    const container = document.getElementById('chartsContainer');
+    container.innerHTML = '';
+    
+    for (const [repo, traffic] of Object.entries(data)) {
+        // Calculate totals
+        const totalViews = traffic.reduce((sum, t) => sum + t.views, 0);
+        const totalClones = traffic.reduce((sum, t) => sum + t.clones, 0);
+        
+        // Create card for each repo
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <h3>${repo}</h3>
+            <div style="display: flex; gap: 2rem; margin-bottom: 1rem; font-size: 1.1em;">
+                <div><strong>Total Views:</strong> <span style="color: #36a2eb;">${totalViews.toLocaleString()}</span></div>
+                <div><strong>Total Clones:</strong> <span style="color: #ff6384;">${totalClones.toLocaleString()}</span></div>
+            </div>
+            <canvas id="chart-${repo.replace('/', '-')}" width="400" height="200"></canvas>
+        `;
+        container.appendChild(card);
+        
+        // Create chart for this repo
+        const labels = traffic.map(t => t.date);
+        const views = traffic.map(t => t.views);
+        const clones = traffic.map(t => t.clones);
+        
+        const datasets = [
+            {
+                label: 'Views',
+                data: views,
+                borderColor: '#36a2eb',
+                backgroundColor: '#36a2eb20',
+                fill: false
+            },
+            {
+                label: 'Clones',
+                data: clones,
+                borderColor: '#ff6384',
+                backgroundColor: '#ff638420',
+                fill: false,
+                borderDash: [5, 5]
+            }
+        ];
+        
+        const ctx = document.getElementById(`chart-${repo.replace('/', '-')}`).getContext('2d');
+        charts[repo] = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+}
+
+async function collectData() {
+    await fetch('/api/collect');
+    loadTrafficData();
+}
+
+document.getElementById('periodSelect').addEventListener('change', loadTrafficData);
+loadTrafficData();
+</script>
+{% endblock %}

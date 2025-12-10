@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>GitHub Token</h2>
+    <div class="form-group">
+        <label>GitHub Personal Access Token:</label>
+        <input type="password" id="tokenInput" placeholder="ghp_...">
+        <button class="btn" onclick="saveToken()">Save Token</button>
+    </div>
+</div>
+
+<div class="card">
+    <h2>My Repositories</h2>
+    <div class="form-group">
+        <label>Add Repository:</label>
+        <input type="text" id="ownerInput" placeholder="owner">
+        <input type="text" id="repoInput" placeholder="repository">
+        <button class="btn" onclick="addRepo()">Add</button>
+    </div>
+    <div id="repoList"></div>
+</div>
+
+<script>
+async function saveToken() {
+    const token = document.getElementById('tokenInput').value;
+    await fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+    });
+    alert('Token saved');
+    document.getElementById('tokenInput').value = '';
+}
+
+async function addRepo() {
+    const owner = document.getElementById('ownerInput').value;
+    const name = document.getElementById('repoInput').value;
+    
+    const response = await fetch('/api/repos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, name })
+    });
+    
+    if (response.ok) {
+        document.getElementById('ownerInput').value = '';
+        document.getElementById('repoInput').value = '';
+        loadRepos();
+    } else {
+        alert('Error adding repository');
+    }
+}
+
+async function removeRepo(owner, name) {
+    await fetch('/api/repos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, name })
+    });
+    loadRepos();
+}
+
+async function deleteRepoData(owner, name) {
+    if (confirm(`Delete all traffic data for ${owner}/${name}?`)) {
+        await fetch('/api/repos/data', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner, name })
+        });
+        alert('Traffic data deleted');
+    }
+}
+
+async function loadRepos() {
+    const response = await fetch('/api/repos');
+    const repos = await response.json();
+    
+    const list = document.getElementById('repoList');
+    list.innerHTML = repos.map(repo => 
+        `<div style="padding: 0.5rem; border: 1px solid #ddd; margin: 0.5rem 0; border-radius: 4px;">
+            ${repo.owner}/${repo.name}
+            <button class="btn" style="float: right; margin-left: 0.5rem;" onclick="removeRepo('${repo.owner}', '${repo.name}')">Remove</button>
+            <button class="btn" style="float: right; background: #dc3545;" onclick="deleteRepoData('${repo.owner}', '${repo.name}')">Delete Data</button>
+        </div>`
+    ).join('');
+}
+
+loadRepos();
+</script>
+{% endblock %}
